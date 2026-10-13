@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Orbit Bot</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --line:#232833;
+  --text:#eef1f6; --muted:#7c8494; --accent:#3de0ff; --accent-ink:#04212a;
+  --green:#36d399; --red:#ff5c5c;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100%}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.mono{font-family:var(--mono)}
+.wrap{padding:0 16px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .dot{width:12px;height:12px;background:var(--accent)}
+.brand b{display:block;font-size:22px;letter-spacing:3px;color:var(--accent)}
+.brand small{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--muted)}
+.icons{display:flex;gap:8px}
+.ibtn{width:42px;height:42px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
+.ibtn svg{width:20px;height:20px}
+.pagehead{display:flex;align-items:center;gap:16px;padding:16px;border-bottom:1px solid var(--line)}
+.pagehead h1{font-size:22px;letter-spacing:2px}
+
+.demo{background:repeating-linear-gradient(45deg,#2a2410,#2a2410 10px,#221d0c 10px,#221d0c 20px);color:#ffd166;font-family:var(--mono);font-size:11px;letter-spacing:2px;text-align:center;padding:6px 8px}
+
+/* ticker */
+.ticker{display:flex;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:13px;overflow-x:auto}
+.ticker div{flex:1;white-space:nowrap;padding:12px 14px;border-right:1px solid var(--line);letter-spacing:1px}
+.ticker div:last-child{border-right:0}
+.up{color:var(--green)} .down{color:var(--red)}
+
+.view{display:none} .view.on{display:block}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+
+/* balance */
+.balrow{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+.modes{display:flex;gap:10px;margin:16px 0 6px}
+.mode{font-family:var(--mono);font-size:13px;letter-spacing:3px;padding:8px 14px;border:1px solid var(--line);color:var(--muted)}
+.mode.on{border-color:var(--accent);color:var(--accent)}
+.big{font-size:64px;font-weight:700;letter-spacing:-1px;line-height:1.05}
+.big span{font-family:var(--mono);font-size:15px;letter-spacing:3px;color:var(--accent);margin-left:8px;font-weight:400}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:22px}
+.grid2>div{padding:18px 0}
+.grid2>div+div{border-left:1px solid var(--line);padding-left:16px}
+.grid2 .v{font-family:var(--mono);font-size:26px;font-weight:700;margin-top:8px}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0}
+.btn{display:flex;justify-content:space-between;align-items:center;padding:18px;font-weight:700;font-size:17px;letter-spacing:1px;border:1px solid var(--line);background:var(--panel)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.center{justify-content:center}
+.btn.stop{border-color:var(--red);color:var(--red);background:transparent}
+.btn.dim{color:var(--muted)}
+
+/* panels */
+.panel{border:1px solid var(--line);background:var(--panel);margin-bottom:16px}
+.phead{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:13px;letter-spacing:2px}
+.phead .sq{display:inline-block;width:9px;height:9px;background:var(--green);margin-right:10px}
+.chart{display:block;width:100%;height:200px}
+.periods{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.periods>*{padding:12px 4px;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--muted)}
+.periods>*+*{border-left:1px solid var(--line)}
+.periods .pv{display:block;font-size:16px;letter-spacing:0;color:var(--green);margin-top:6px;font-weight:700}
+.periods button.on{background:var(--accent);color:var(--accent-ink)}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);margin-bottom:16px}
+.stats>div{padding:18px 16px;background:var(--panel)}
+.stats>div:nth-child(even){border-left:1px solid var(--line)}
+.stats>div:nth-child(n+3){border-top:1px solid var(--line)}
+.stats .v{font-size:34px;font-weight:700;margin-top:10px;font-family:var(--mono)}
+
+.open{border-left:3px solid var(--accent);background:var(--panel);padding:16px;margin-bottom:16px}
+.open .row{display:flex;justify-content:space-between;align-items:center}
+.tag{font-family:var(--mono);font-size:12px;letter-spacing:2px;border:1px solid var(--line);padding:6px 10px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;font-family:var(--mono);font-size:13px}
+.kv span{color:var(--muted);display:block;font-size:11px;letter-spacing:2px;margin-bottom:3px}
+
+.list .item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);background:var(--panel);margin-bottom:8px}
+.ico{width:40px;height:40px;border:1px solid currentColor;display:grid;place-items:center;flex:none;font-family:var(--mono);font-size:11px}
+.item .t{font-weight:700}
+.item .d{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:3px}
+.item .amt{margin-left:auto;font-family:var(--mono);font-weight:700;text-align:right}
+.empty{padding:30px 16px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:13px;border:1px dashed var(--line)}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);margin:16px 0}
+.tabs button{padding:13px 4px;font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--muted)}
+.tabs button+button{border-left:1px solid var(--line)}
+.tabs button.on{background:var(--accent);color:var(--accent-ink)}
+
+.balcard{border:1px solid var(--line);padding:24px 16px;text-align:center;margin-top:16px}
+.balcard .big{font-size:52px;margin:10px 0 18px}
+
+/* settings */
+.sgroup{border:1px solid var(--line);margin:16px 0}
+.sgroup h3{font-family:var(--mono);font-size:12px;letter-spacing:3px;color:var(--accent);padding:12px 16px;background:var(--panel2);font-weight:400}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:16px;border-top:1px solid var(--line);background:var(--panel);width:100%;text-align:left;font-size:16px;font-weight:700}
+.srow .r{color:var(--muted);font-weight:500;display:flex;gap:10px;align-items:center}
+.sw{width:54px;height:28px;border:1px solid var(--line);position:relative;background:var(--bg)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;background:var(--muted);transition:.15s}
+.sw.on{border-color:var(--accent);background:#0d2a31}
+.sw.on::after{left:29px;background:var(--accent)}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{padding:12px 0 14px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:2px;border-top:3px solid transparent}
+nav button+button{border-left:1px solid var(--line)}
+nav button.on{color:var(--accent);border-top-color:var(--accent)}
+nav svg{width:22px;height:22px}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;z-index:10}
+.modal.on{display:flex}
+.sheet{background:var(--panel);border-top:2px solid var(--accent);width:100%;padding:22px 16px calc(22px + env(safe-area-inset-bottom))}
+.sheet h2{font-size:20px;margin-bottom:10px}
+.sheet p{color:var(--muted);line-height:1.5;margin-bottom:18px}
+</style>
+</head>
+<body>
+
+<header class="top" id="mainHead">
+  <div class="brand"><i class="dot"></i><div><b>ORBIT</b><small>// AUTO TRADING BOT</small></div></div>
+  <div class="icons">
+    <button class="ibtn" onclick="toast('Notifications','No new notifications.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>
+    <button class="ibtn" onclick="go('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></button>
+  </div>
+</header>
+<header class="pagehead" id="subHead" style="display:none">
+  <button class="ibtn" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <h1 id="subTitle"></h1>
+</header>
+
+<div class="demo">DEMO MODE · SIMULATED DATA · NOT REAL FUNDS</div>
+<div class="ticker" id="ticker">
+  <div>BTC/USDT <span id="tBTC" class="up">…</span></div>
+  <div>ETH/USDT <span id="tETH" class="up">…</span></div>
+</div>
+
+<!-- HOME -->
+<section class="view on wrap" id="v-home">
+  <div class="balrow"><span class="label">Total balance / USDT</span><span class="label">All time <b class="up" id="allTime"></b></span></div>
+  <div class="modes"><button class="mode" disabled style="opacity:.4">LIVE</button><button class="mode on">DEMO</button></div>
+  <div class="big" id="homeBal">0<span>USDT</span></div>
+  <div class="grid2">
+    <div><div class="label">Referrals</div><div class="v">0.00</div></div>
+    <div><div class="label">Bot status</div><div class="v" id="homeStatus"></div></div>
+  </div>
+  <div class="actions">
+    <button class="btn primary" onclick="notWired()">TOP UP <span>+</span></button>
+    <button class="btn" onclick="notWired()">WITHDRAW <span>↑</span></button>
+  </div>
+  <div class="panel">
+    <div class="phead"><span><i class="sq"></i>BOT PERFORMANCE</span><span class="up" id="homePerf"></span></div>
+    <svg class="chart" id="homeChart"></svg>
+    <div class="periods" id="homePeriods"></div>
+  </div>
+</section>
+
+<!-- LEDGER -->
+<section class="view wrap" id="v-ledger">
+  <div class="balcard">
+    <div class="label">Balance</div>
+    <div class="big" id="ledBal">0<span>USDT</span></div>
+    <div class="actions" style="margin:0"><button class="btn primary center" onclick="notWired()">TOP UP</button><button class="btn center" onclick="notWired()">WITHDRAW</button></div>
+  </div>
+  <div class="tabs" id="ledTabs">
+    <button class="on" data-t="deposit">DEPOSIT</button><button data-t="withdraw">WITHDRAW</button><button data-t="referral">REFERRAL</button>
+  </div>
+  <div class="list" id="ledList"></div>
+</section>
+
+<!-- TRADING -->
+<section class="view wrap" id="v-trading" style="padding-top:16px">
+  <div class="panel">
+    <div class="phead"><span><i class="sq"></i>Performance</span><span id="trPerf"></span></div>
+    <svg class="chart" id="trChart" style="height:240px"></svg>
+    <div class="periods" id="trPeriods"></div>
+  </div>
+  <div class="actions" style="margin-top:0">
+    <button class="btn center" id="startBtn" onclick="setBot(true)">START</button>
+    <button class="btn center" id="stopBtn" onclick="setBot(false)">STOP</button>
+  </div>
+  <div class="stats">
+    <div><div class="label">Total deals</div><div class="v" id="sTotal"></div></div>
+    <div><div class="label">Successful</div><div class="v up" id="sWin"></div></div>
+    <div><div class="label">Unsuccessful</div><div class="v down" id="sLoss"></div></div>
+    <div><div class="label">Profit</div><div class="v" id="sProfit"></div></div>
+  </div>
+  <div class="open" id="openTrade"></div>
+  <div class="label" style="margin:22px 0 12px">Trade history</div>
+  <div class="list" id="tradeList"></div>
+</section>
+
+<!-- SETTINGS -->
+<section class="view wrap" id="v-settings">
+  <div class="sgroup">
+    <h3>GENERAL</h3>
+    <button class="srow" onclick="cycleLang()">Language <span class="r"><span id="langVal">English</span> ›</span></button>
+    <button class="srow" onclick="toggle('push')">Push notifications <i class="sw" id="sw-push"></i></button>
+    <button class="srow" onclick="toggle('vibe')">Vibration <i class="sw" id="sw-vibe"></i></button>
+  </div>
+  <div class="sgroup">
+    <h3>SUPPORT</h3>
+    <button class="srow" onclick="toast('Help center','Link this to your help page.')">Help center <span class="r">›</span></button>
+    <button class="srow" onclick="toast('FAQ','Add your FAQ content here.')">FAQ <span class="r">›</span></button>
+    <button class="srow" onclick="toast('Contact support','Link this to your support Telegram account.')">Contact support <span class="r">›</span></button>
+    <button class="srow" onclick="toast('Referral link','Referral links will be generated once a backend is connected.')">Referral link <span class="r">›</span></button>
+    <button class="srow" onclick="toast('Risk disclosure','Crypto trading involves a high risk of loss. Past performance does not guarantee future results.')">Risk disclosure <span class="r">›</span></button>
+  </div>
+</section>
+
+<nav id="nav">
+  <button class="on" data-v="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>HOME</button>
+  <button data-v="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14"/><path d="M3 10h18M16 15h2"/></svg>LEDGER</button>
+  <button data-v="trading"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/></svg>TRADING</button>
+  <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>SETTINGS</button>
+</nav>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="sheet"><h2 id="mTitle"></h2><p id="mText"></p><button class="btn primary center" style="width:100%" onclick="closeModal()">OK</button></div>
+</div>
+
+<script>
+/* ---------- Telegram ---------- */
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor('#0b0d12'); tg.setBackgroundColor('#0b0d12'); } catch(e){} }
+
+/* ---------- settings (per-viewer convenience) ---------- */
+const prefs = { push:true, vibe:true, lang:'English' };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem('orbit_prefs')||'{}')); } catch(e){}
+function savePrefs(){ try{ localStorage.setItem('orbit_prefs', JSON.stringify(prefs)); }catch(e){} }
+function haptic(){ if(prefs.vibe && tg && tg.HapticFeedback){ try{ tg.HapticFeedback.impactOccurred('light'); }catch(e){} } }
+
+/* ---------- DEMO data source ----------
+   Replace getTrades() / getDeposits() with calls to your real bot backend. */
+const DAY = 864e5, NOW = Date.now(), START_CAPITAL = 100;
+function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function getTrades(){
+  const r = rng(42), out = [], n = 140; let px = {BTC:61000, ETH:2500};
+  for(let i=0;i<n;i++){
+    const t = NOW - 90*DAY + i*(90*DAY/n) + r()*3e6;
+    const pair = r()<0.6 ? 'BTC' : 'ETH';
+    px[pair] *= 1 + (r()-0.48)*0.02;
+    const side = r()<0.55 ? 'LONG' : 'SHORT';
+    const win = r() < 0.71;
+    const pct = win ? 0.15 + r()*0.6 : -(0.15 + r()*0.55);
+    const entry = px[pair], exit = entry*(1 + (side==='LONG'?1:-1)*pct/100);
+    out.push({ t, pair, side, entry, exit, pnl: START_CAPITAL*2*pct/100 });
+  }
+  return out;
+}
+function getDeposits(){ return [{ t: NOW - 90*DAY, amount: START_CAPITAL }]; }
+
+const trades = getTrades(), deposits = getDeposits();
+const totalPnl = trades.reduce((s,x)=>s+x.pnl,0);
+const balance = START_CAPITAL + totalPnl;
+let botOn = true;
+const openTrade = { pair:'BTC', side:'LONG', entry: trades.filter(t=>t.pair==='BTC').pop().exit, size: 0.003 };
+const live = { BTC:null, ETH:null };
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const fmt = (n,d=2) => n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sign = n => (n>=0?'+':'−') + '$' + fmt(Math.abs(n));
+const date = t => new Date(t).toISOString().replace('T',' ').slice(0,19);
+const PERIODS = { '24H':DAY, '7D':7*DAY, '1M':30*DAY, '3M':90*DAY };
+const inPeriod = p => trades.filter(x => x.t >= NOW - PERIODS[p]);
+const pnlOf = list => list.reduce((s,x)=>s+x.pnl,0);
+
+function drawChart(svg, list, withAxis){
+  const W = svg.clientWidth || 340, H = svg.clientHeight || 200, padL = withAxis ? 52 : 12, padR = 12, padT = 16, padB = 16;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  let cum = 0; const pts = [0, ...list.map(x => (cum += x.pnl))].map(v => v/START_CAPITAL*100);
+  if (pts.length < 2) pts.push(0);
+  let min = Math.min(...pts), max = Math.max(...pts); if (max-min < 0.5){ max += .25; min -= .25; }
+  const span = max-min; min -= span*.08; max += span*.08;
+  const x = i => padL + i*(W-padL-padR)/(pts.length-1), y = v => padT + (max-v)/(max-min)*(H-padT-padB);
+  let g = '';
+  const steps = withAxis ? 8 : 3;
+  for (let k=0;k<=steps;k++){ const v = min + (max-min)*k/steps, yy = y(v);
+    g += `<line x1="${padL}" x2="${W-padR}" y1="${yy}" y2="${yy}" stroke="#232833"/>`;
+    if (withAxis) g += `<text x="${padL-8}" y="${yy+4}" text-anchor="end" fill="#7c8494" font-family="JetBrains Mono" font-size="10">${v.toFixed(2)}%</text>`; }
+  const line = pts.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const col = pts[pts.length-1] >= 0 ? '#3de0ff' : '#ff5c5c';
+  svg.innerHTML = `<defs><linearGradient id="g${svg.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".28"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    ${g}<path d="${line}L${x(pts.length-1)},${H-padB}L${padL},${H-padB}Z" fill="url(#g${svg.id})"/>
+    <path d="${line}" fill="none" stroke="${col}" stroke-width="2"/>
+    <circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1])}" r="4" fill="${col}"/>`;
+}
+
+/* ---------- renders ---------- */
+let homeP = '3M', trP = '24H';
+function renderHome(){
+  $('homeBal').innerHTML = fmt(balance) + '<span>USDT</span>';
+  $('allTime').textContent = '▲ ' + sign(totalPnl);
+  $('homeStatus').innerHTML = botOn ? '<span class="up">■ Active</span>' : '<span class="down">■ Stopped</span>';
+  $('homePerf').textContent = sign(pnlOf(inPeriod(homeP)));
+  $('homePeriods').innerHTML = Object.keys(PERIODS).map(p => { const v = pnlOf(inPeriod(p));
+    return `<button class="${p===homeP?'on':''}" data-p="${p}">${p}<span class="pv ${v<0?'down':''}" style="${p===homeP?'color:inherit':''}">${sign(v)}</span></button>`; }).join('');
+  drawChart($('homeChart'), inPeriod(homeP), false);
+}
+function renderTrading(){
+  const list = inPeriod(trP), wins = list.filter(x=>x.pnl>0).length, pct = pnlOf(list)/START_CAPITAL*100;
+  $('trPerf').innerHTML = `<span class="${pct<0?'down':'up'}">${pct>=0?'+':''}${pct.toFixed(2)}%</span>`;
+  $('trPeriods').innerHTML = Object.keys(PERIODS).map(p => `<button class="${p===trP?'on':''}" data-p="${p}">${p}</button>`).join('');
+  $('sTotal').textContent = list.length; $('sWin').textContent = wins; $('sLoss').textContent = list.length - wins;
+  $('sProfit').innerHTML = `<span class="${pct<0?'down':'up'}">${pct.toFixed(2)} %</span>`;
+  drawChart($('trChart'), list, true);
+  $('startBtn').className = 'btn center ' + (botOn ? 'dim' : 'primary');
+  $('stopBtn').className = 'btn center ' + (botOn ? 'stop' : 'dim');
+  renderOpen();
+  $('tradeList').innerHTML = list.length ? list.slice().reverse().map(x => `
+    <div class="item"><div class="ico ${x.pnl>=0?'up':'down'}">${x.pair}</div>
+      <div><div class="t">${x.pair}/USDT · ${x.side}</div><div class="d">${fmt(x.entry)} → ${fmt(x.exit)}</div><div class="d">${date(x.t)}</div></div>
+      <div class="amt ${x.pnl>=0?'up':'down'}">${x.pnl>=0?'+':'−'}${fmt(Math.abs(x.pnl))}</div></div>`).join('')
+    : '<div class="empty">No closed trades in this period</div>';
+}
+function renderOpen(){
+  if (!botOn){ $('openTrade').innerHTML = '<div class="row"><b>No open trade</b><span class="tag">BOT STOPPED</span></div>'; return; }
+  const mark = live.BTC || openTrade.entry, upnl = (mark - openTrade.entry)*openTrade.size*(openTrade.side==='LONG'?1:-1);
+  $('openTrade').innerHTML = `<div class="row"><b>Open trade</b><span class="tag">BTCUSDT · ${openTrade.side}</span></div>
+    <div class="kv"><div><span>ENTRY</span>${fmt(openTrade.entry)}</div><div><span>MARK${live.BTC?' (LIVE)':''}</span>${fmt(mark)}</div>
+    <div><span>SIZE</span>${openTrade.size} BTC</div><div><span>UNREALIZED</span><b class="${upnl>=0?'up':'down'}">${sign(upnl)}</b></div></div>`;
+}
+let ledTab = 'deposit';
+function renderLedger(){
+  $('ledBal').innerHTML = fmt(balance) + '<span>USDT</span>';
+  [...$('ledTabs').children].forEach(b => b.classList.toggle('on', b.dataset.t===ledTab));
+  $('ledList').innerHTML = ledTab==='deposit'
+    ? deposits.map(d => `<div class="item"><div class="ico up">↑</div><div><div class="t">Demo deposit</div><div class="d">${date(d.t)}</div></div><div class="amt up">+${fmt(d.amount)}</div></div>`).join('')
+    : `<div class="empty">No ${ledTab} transactions</div>`;
+}
+function renderSettings(){
+  $('sw-push').classList.toggle('on', prefs.push); $('sw-vibe').classList.toggle('on', prefs.vibe);
+  $('langVal').textContent = prefs.lang;
+}
+
+/* ---------- navigation ---------- */
+const TITLES = { ledger:'LEDGER', trading:'TRADING', settings:'SETTINGS' };
+function go(v){
+  haptic();
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id==='v-'+v));
+  [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.v===v));
+  $('mainHead').style.display = v==='home' ? '' : 'none';
+  $('subHead').style.display = v==='home' ? 'none' : '';
+  $('subTitle').textContent = TITLES[v] || '';
+  if (tg && tg.BackButton){ try{ v==='home' ? tg.BackButton.hide() : tg.BackButton.show(); }catch(e){} }
+  ({home:renderHome, ledger:renderLedger, trading:renderTrading, settings:renderSettings})[v]();
+  window.scrollTo(0,0);
+}
+if (tg && tg.BackButton) tg.BackButton.onClick(() => go('home'));
+$('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); });
+$('homePeriods').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ haptic(); homeP = b.dataset.p; renderHome(); } });
+$('trPeriods').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ haptic(); trP = b.dataset.p; renderTrading(); } });
+$('ledTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ haptic(); ledTab = b.dataset.t; renderLedger(); } });
+
+function setBot(on){ haptic(); botOn = on; renderTrading(); }
+function toggle(k){ prefs[k] = !prefs[k]; savePrefs(); haptic(); renderSettings(); }
+function cycleLang(){ prefs.lang = prefs.lang==='English' ? 'Français' : 'English'; savePrefs(); renderSettings(); }
+function toast(t,m){ $('mTitle').textContent = t; $('mText').textContent = m; $('modal').classList.add('on'); }
+function closeModal(){ $('modal').classList.remove('on'); }
+function notWired(){ toast('Demo mode','Deposits and withdrawals are not connected. Wire this button to your exchange or payment backend before going live.'); }
+
+/* ---------- live BTC / ETH tickers (public Binance API) ---------- */
+async function loadTickers(){
+  try{
+    const r = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22%5D');
+    const d = await r.json();
+    d.forEach(t => { const k = t.symbol.slice(0,3), ch = +t.priceChangePercent; live[k] = +t.lastPrice;
+      const el = $('t'+k); el.className = ch>=0?'up':'down'; el.textContent = `${ch>=0?'▲':'▼'} ${ch>=0?'+':''}${ch.toFixed(2)}%  ${fmt(+t.lastPrice)}`; });
+    if ($('v-trading').classList.contains('on')) renderOpen();
+  }catch(e){ ['BTC','ETH'].forEach(k => { $('t'+k).textContent = '—'; }); }
+}
+loadTickers(); setInterval(loadTickers, 15000);
+
+renderHome();
+window.addEventListener('resize', () => { renderHome(); if ($('v-trading').classList.contains('on')) renderTrading(); });
+</script>
+</body>
+</html>
